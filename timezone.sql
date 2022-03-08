@@ -6,7 +6,6 @@
 # https://github.com/sequelpro/sequelpro
 #
 # Host: 10.2.33.5 (MySQL 5.5.49-37.9-log)
-# Database: icannondale_booking_dev
 # Generation Time: 2016-07-20 06:39:37 +0000
 # ************************************************************
 
