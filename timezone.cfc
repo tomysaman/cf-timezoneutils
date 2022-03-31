@@ -1,82 +1,42 @@
-<cfcomponent displayname="timezone" hint="various timezone functions not included in mx: version 2.1 jul-2005 Paul Hastings (paul@sustainbleGIS.com)" output="No">
+<cfcomponent displayname="timezone" output="No">
 <!---
 author:		paul hastings <paul@sustainableGIS.com>
-date:		11-sep-2003
-revisions:
-			23-oct-2003 changed to use argument dates rather than setting calendar time, forgot that
-			java MONTH start with zero. kept gregorian calendar object for timezone offset in order to
-			use DST_OFFSET field in calendar object.
-			8-nov-2003 added castToUTC, castFromUTC to support Ray Camden's blog i18n, added castToServer
-			and castFromServer at user request.
-			14-feb-2005 reworked castToUTC, castFromUTC to not use gregorian calendar class,
-			added init().
-			16-feb-2005 fixed java/cf date bug in cast to/from functions
-			6-aug-2005 fixed bug in to/from UTC methods, was using decimals hours for tz
-			offsetsbut cf's dateAdd function only takes integers. thanks to Behrang Noroozinia
-			<behrang@khorshidchehr.com> for finding that bug.
-			30-mar-2006 added two methods (getServerTZShort,getServerId) contributed by dan
-			switzer: dswitzer@pengoworks.com
+date:		11-SEP-2003
+				- Original timezone.cfc codes
 
-			29-aug-2010 added new method (convertTZ) to return time converted from one timezone
-			to another. contributed by John Thwaites: johnthwaites@logicdepot.com
-			to be used by other conversion methods contributed by John Thwaites: johnthwaites@logicdepot.com
-			29-aug-2010 added new method (getTZOffsetBase) to return the offset in milliseconds 
-			to be used by other conversion methods contributed by John Thwaites: johnthwaites@logicdepot.com
-			29-aug-2010 fixed (getTZOffset,castToUTC,castFromUTC) to use milliseconds offset to calculate 
-			the correct time rather than always midnight of the day which allows for DST at the 
-			correct cut over time. contributed by John Thwaites: johnthwaites@logicdepot.com
-			29-aug-2010 added new method (getTimeZone) to return a structure with all details of 
-			a timezone. contributed by John Thwaites: johnthwaites@logicdepot.com
-			29-aug-2010 add variable "defaultTimeZoneId" to store DefaultTimezone which can be different
-			from the server time zone.
-			29-aug-2010 added new method (loadStandardTimeZones) which creates an internal structure 
-			"standardTimeZones" that contains a set of "standard" time zones which can be used to build 
-			a selection list for a time zone picker. John Thwaites: johnthwaites@logicdepot.com
-			29-aug-2010 added new methods (getDefaultTimeZoneId, getStandardTimeZoneList, getStandardTimeZoneDesc,
-			setDefaultTimeZone, getTimeZoneShortName, getCurrentTime John Thwaites: johnthwaites@logicdepot.com
-			
-			
-notes:		this cfc contains methods to handle some timezone functionality not in cfmx as well as when
-			you need to "cast" to a specific timezone (cf's timezone functions are tied to server). it
-			requires the use of createObject.
+author:		Tomy Saman <tomywutoto@gmail.com>
+date:		30-MAR-2022
+				- Renamed getTimezone() to getTZ() because getTimezone function name will clash with the builtin Lucee function getTimezone()
+				- Added a custom dateAddByHour() function to handle time calculation when converting between timezones (because CF's DateAdd() will take DST into consideration and won't return the expecting result)
 
 methods in this CFC:
-			- isDST determines if a given date & timezone are in DST. if no date or timezone is passed
-			the method defaults to current date/time and server timezone. PUBLIC.
-			- getAvailableTZ returns an array of available timezones on this server (ie according to
-			server's JVM). PUBLIC.
+			- isDST determines if a given date & timezone are in DST. if no date or timezone is passed the method defaults to current date/time and server timezone. PUBLIC.
+			- getAvailableTZ returns an array of available timezones on this server (ie according to server's JVM). PUBLIC.
 			- isValidTZ determines if a given timezone is valid according to getAvailableTZ. PUBLIC.
 			- usesDST determines if a given timezone uses DST. PUBLIC.
-			- getRawOffset returns the raw (as opposed to DST) offset in hours for a given timezone.
-			PUBLIC.
-			- getTZOffset returns offset in hours for a given date/time & timezone, uses DST if timezone
-			uses and is currently in DST. returns -999 if bad date or bad timezone. PUBLIC.
+			- getRawOffset returns the raw (as opposed to DST) offset in hours for a given timezone. PUBLIC.
+			- getTZOffset returns offset in hours for a given date/time & timezone, uses DST if timezone uses and is currently in DST. returns -999 if bad date or bad timezone. PUBLIC.
 			- getDST returns DST savings for given timezone. returns -999 for bad timezone. PUBLIC.
-			- castToUTC return UTC from given datetime in given timezone. required argument thisDate,
-			optional argument thisTZ valid timezone ID, defaults to server timezone. PUBLIC.
-			- castfromUTC return date in given timezone from UTC datetime. required argument thisDate,
-			optional argument thisTZ valid timezone ID, defaults to server timezone. PUBLIC.
-			- castToServer returns server datetime from given datetime in given timezone. required argument
-			thisDate valid datetime, optional argument thisTZ valid timezone ID, defaults to server
-			timezone. PUBLIC.
-			- castfromServer return datetime in given timezone from server datetime. required argument
-			thisDate valdi datetime, optional argument thisTZ valid timezone ID, defaults to server
-			timezone. PUBLIC.
+			- castToUTC return UTC from given datetime in given timezone. required argument thisDate, optional argument thisTZ valid timezone ID, defaults to server timezone. PUBLIC.
+			- castfromUTC return date in given timezone from UTC datetime. required argument thisDate, optional argument thisTZ valid timezone ID, defaults to server timezone. PUBLIC.
+			- castToServer returns server datetime from given datetime in given timezone. required argument thisDate valid datetime, optional argument thisTZ valid timezone ID, defaults to server timezone. PUBLIC.
+			- castfromServer return datetime in given timezone from server datetime. required argument thisDate valdi datetime, optional argument thisTZ valid timezone ID, defaults to server timezone. PUBLIC.
 			- getServerTZ returns server timezone. PUBLIC
 			- getServerTZShort returns "short" name for the server's timezone. PUBLIC
 			- getServerId returns ID for the server's timezone. PUBLIC
 			- convertTZ retuen time converted fom one timezone to another
 			- getTZOffsetBase return the offset in milliseconds. PUBLIC.
-			- getTimeZone return a structure with all details of a timezone. PUBLIC.
+			- getTZ return a structure with all details of a timezone. PUBLIC.
 			- setDefaultTimeZone sets the default timezone, to override the server derrived zone.
 			- getDefaultTimeZoneId returns the id of the default timezone. PUBLIC.
 			- getTimeZoneShortName eturns the short name for a timezone. PUBLIC.
 			- getCurrentTime rreturns the current time in the specified timezone, or default. PUBLIC.
 			- getStandardTimeZoneList reurns a list of standard time zone id's fom internal structure. PUBLIC. 
 			- getStandardTimeZoneDesc returns the description for a timezone from the internal structure. PUBLIC.
+			- dateAddByHour similar to dateAdd() function but it won't consider DST when doing calculation. PUBLIC.
 			- loadStandardTimeZones loads the internal structure of "standard" timezones. PRIVATE. 
 			- addStandardTimeZone used by loadStandardTimeZones to add entries to internal structure. PRIVATE.
- --->
+--->
 
 	<!--- the time zone object itself --->
 	<cfset variables.tzObj = createObject("java","java.util.TimeZone")>
@@ -172,7 +132,7 @@ methods in this CFC:
 	<!---
 	Added by John Thwaites 08/29/2010 to correct midnight problem
 	--->
-	<cffunction name="getTZOffsetBase" output="No" access="private" returntype="numeric">  
+	<cffunction name="getTZOffsetBase" output="No" access="public" returntype="numeric">  
 		<cfargument name="thisDate" required="no" type="date" default="#now()#">
 		<cfargument name="tz" required="no" default="#tzObj.getDefault().ID#">
 		<cfscript>
@@ -206,8 +166,13 @@ methods in this CFC:
 		<cfargument name="thisDate" required="yes" type="date">
 		<cfargument name="tz" required="false" default="#variables.mytz#">
 
-		<cfset var thisOffset=(getTZOffsetBase(arguments.thisDate, arguments.tz)/1000)*-1.00>
-		<cfreturn dateAdd("s",thisOffset,arguments.thisDate)>
+		<!--- TS: Don't use dateAdd() as it takes DST into consideration when doing calculation, use our custom dateAddByHour() instead --->
+		<!---<cfset var thisOffset=(getTZOffsetBase(arguments.thisDate, arguments.tz)/1000)*-1.00>
+		<cfreturn dateAdd("s",thisOffset,arguments.thisDate)>--->
+
+		<cfset var thisOffset = (getTZOffsetBase(arguments.thisDate, arguments.tz)/1000)*-1.00>
+		<cfset thisOffset = thisOffset / 3600>
+		<cfreturn dateAddByHour(thisOffset, arguments.thisDate)>
 	</cffunction>
 
 
@@ -221,8 +186,13 @@ methods in this CFC:
 		<cfargument name="thisDate" required="yes" type="date">
 		<cfargument name="tz" required="false" default="#variables.mytz#">
 
-		<cfset var thisOffset=getTZOffsetBase(arguments.thisDate, arguments.tz)/1000>
-		<cfreturn dateAdd("s",thisOffset,arguments.thisDate)>
+		<!--- TS: Don't use dateAdd() as it takes DST into consideration when doing calculation, use our custom dateAddByHour() instead --->
+		<!---<cfset var thisOffset=getTZOffsetBase(arguments.thisDate, arguments.tz)/1000>
+		<cfreturn dateAdd("s",thisOffset,arguments.thisDate)>--->
+
+		<cfset var thisOffset = getTZOffsetBase(arguments.thisDate, arguments.tz)/1000>
+		<cfset thisOffset = thisOffset / 3600>
+		<cfreturn dateAddByHour(thisOffset, arguments.thisDate)>
 	</cffunction>
 
 
@@ -270,11 +240,21 @@ methods in this CFC:
 		<cfargument name="thisDate" required="no" type="date" default="#now()#">
 		<cfargument name="fromTZ" required="no" default="#tzObj.getDefault().ID#">
 		<cfargument name="toTZ" required="no" default="#tzObj.getDefault().ID#">
-		<cfset var utcDate = dateAdd("s",(getTZOffsetBase(arguments.thisDate, arguments.fromTZ)/1000)*-1.00,arguments.thisDate)>
-		<cfreturn dateAdd("s",getTZOffsetBase(utcDate, arguments.toTZ)/1000,utcDate)>
+
+		<!--- TS: Don't use dateAdd() as it takes DST into consideration when doing calculation, use our custom dateAddByHour() instead --->
+		<!---<cfset var utcDate = dateAdd("s",(getTZOffsetBase(arguments.thisDate, arguments.fromTZ)/1000)*-1.00,arguments.thisDate)>--->
+		<cfset var thisOffset = (getTZOffsetBase(arguments.thisDate, arguments.fromTZ)/1000) * -1.00>
+		<cfset thisOffset = thisOffset / 3600>
+		<cfset var utcDate = dateAddByHour(thisOffset, arguments.thisDate)>
+
+		<!--- TS: Don't use dateAdd() as it takes DST into consideration when doing calculation, use our custom dateAddByHour() instead --->
+		<!---<cfreturn dateAdd("s",getTZOffsetBase(utcDate, arguments.toTZ)/1000,utcDate)>--->
+		<cfset var thisOffset = getTZOffsetBase(utcDate, arguments.toTZ)/1000>
+		<cfset thisOffset = thisOffset / 3600>
+		<cfreturn dateAddByHour(thisOffset, utcDate)>
 	</cffunction>
 
-<!--- getTZ, formerly getTimeZone but that conflicts with a Railo function- fix from https://github.com/rip747/TimeZone-CFC/issues/3 --->
+	<!--- getTZ, formerly getTimeZone but that conflicts with Lucee's function - fix from https://github.com/rip747/TimeZone-CFC/issues/3 --->
 	<cffunction name="getTZ" output="false" access="public" returntype="any"
 				hint="returns the timezone detail. contributed by john thwaites: johnthwaites@logicdepot.com">
 		<cfargument name="tz" required="false" default="#variables.mytz#">
@@ -376,6 +356,66 @@ methods in this CFC:
 		</cfscript>
 	</cffunction>
 
+
+	<!--- dateAddByHour()
+		- The functions in this cfc used to use CF builtin dateAdd() function to calculated the date/time between timezones.
+		- Because dateAdd() function take DST into consideration, if your CF server is set to a timezone that uses DST, the result may not be the value you want if the date/time conversion cross over DST periods
+		- For example, on 2022-04-03 Australia DST changes from ON to OFF. So if you do dateAdd("h", -12, '2022-04-03 1:00pm') you get 2022-04-03 2:00am, not 2022-04-03 1:00am
+			This is because when DST changes from ON to OFF, there is one extra hour between 2am and 3am (i.e. it takes 2hrs for clock to go from 2am to 3am on that day)
+		- To avoid the unwanted effect likes this, I created a custom dateAddByHour() function to do the calculation instead
+			Note: Technically if we can change the server timezone to one that does not use DST whiile doing the dateAdd() calculation, that would work too. But change server timezone on-the-fly while executing codes is not a good idea	
+	--->
+	<cffunction name="dateAddByHour" access="public" returntype="Date"
+		hint="Similar to dateAdd() function but won't take DST into consideration and only accept hour adjustment values">  
+		<cfargument name="hours" required="true" type="numeric">
+		<cfargument name="dateToTest" required="true" type="date">
+		<cfscript>
+		var result = '';
+		var resultDate = '';
+		var resultHour = 0;
+		var resultMinute = 0;
+
+		var fromHour = hour(arguments.dateToTest);
+		var fromMinute = minute(arguments.dateToTest);
+		var hourAdjust = (arguments.hours gt 0) ? floor(arguments.hours) : ceiling(arguments.hours); // get the integer part of the hours value; if it is positive number use floor() and if it is negative number use ceiling()
+		var minuteAdjust = ((arguments.hours * 100) mod 100) * 60/100; // convert the partial hour to minutes (e.g. 0.75 to 45)
+
+		// Adjust minute
+		var resultMinute = fromMinute + minuteAdjust;
+		if ( resultMinute lt 0 ) {
+			// If it become the previous hour, adjust the hour
+			hourAdjust = hourAdjust - 1;
+			resultMinute = 60 + resultMinute;
+		} else if ( resultMinute gte 60 ) {
+			// If it become the next hour, adjust the hour
+			hourAdjust = hourAdjust + 1;
+			resultMinute = resultMinute - 60;
+		} else {
+			// Otherwise, it is the same hour
+			// No need to do anything
+		}
+
+		// Adjust hour
+		var resultHour = fromHour + hourAdjust;
+		if ( resultHour lt 0 ) {
+			// If it become the previous day, adjust the date
+			resultDate = dateAdd("d", -1, arguments.dateToTest);
+			resultHour = 24 + resultHour;
+		} else if ( resultHour gte 24 ) {
+			// If it become the next day, adjust the date
+			resultDate = dateAdd("d", 1, arguments.dateToTest);
+			resultHour = resultHour - 24;
+		} else {
+			// Otherwise, it is the same day
+			resultDate = arguments.dateToTest;
+		}
+
+		result = createDateTime( year(resultDate), month(resultDate), day(resultDate), resultHour, resultMinute, 0 );
+		return result;
+		</cfscript>
+	</cffunction>
+
+
 	<!--- loadStandardTimeZones --->
 	<cffunction name="loadStandardTimeZones" access="private" returntype="Struct">
 		<cfscript>
@@ -468,6 +508,7 @@ methods in this CFC:
 		return duplicate(vsTZ);
 		</cfscript>
 	</cffunction>
+
 	<!--- addStandardTimeZone --->
 	<cffunction name="addStandardTimeZone" access="private">
 		<cfargument name="aTZStruct" type="struct" required="true">
