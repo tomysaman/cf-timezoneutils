@@ -7,16 +7,17 @@ CFC & function to help you convert a time from a timezone to another timezone
 
 # Why
 
-### For Adobe ColdFusion or very early version of Lucee (before v4.5)
+### For Adobe ColdFusion or very early version of Lucee
 
 Because Adobe ColdFusion lack a proper timezone date time calculation builtin function, you can use this CFC to help you.
 
-### You don't need this for Lucee
+### You don't need this for Lucee v4.5 and up
 
 In Lucee, DateTimeFormat() and ParseDateTime() functions support a timezone argument and you can acheive the conversion by:
 ```
   // Convert a server time (as it is on server timezone) to London time
   londonTime = DateTimeFormat( now(), "yyyy-mm-dd HH:nn:ss", "Europe/London" );
+
   // Convert a time as it is on London timezone to a time on server timezone (assume server timezone is New_York)
   serverTime = ParseDateTime( date="2025-10-11 13:17:30", timezone="Europe/London" ) // result is {ts '2025-10-11 08:17:30'}
 ```
